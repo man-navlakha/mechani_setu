@@ -17,6 +17,7 @@ import MechanicFound from './Page/MechanicFound';
 import RequestLayout from './Page/RequestLayout';
 import FindingMechanic from './Page/FindingMechanic';
 import NearbyMechanics from './Page/NearbyMechanics';
+import MechanicRegistration from './Page/MechanicRegistration';
 import Protected from './ProtectedRoute';
 import { WebSocketProvider, useWebSocket } from './context/WebSocketContext';
 
@@ -43,18 +44,17 @@ const GlobalSocketHandler = () => {
 
       const isOnJobRelatedPage = location.pathname.startsWith('/finding/') || location.pathname.startsWith('/mechanic-found/');
 
-      if (location.pathname === '/' || isOnJobRelatedPage) {
-        // ✨ ADDED setTimeout ✨
+      if (noMechanicFound) {
+        // Navigate immediately for better UX
+        navigate('/nearby-mechanics');
+      } else if (location.pathname === '/' || isOnJobRelatedPage) {
         const timerId = setTimeout(() => {
-          if (noMechanicFound) {
-            // Navigate to nearby mechanics page when no mechanic found
-            navigate('/nearby-mechanics');
-          } else if (location.pathname === '/') {
+          if (location.pathname === '/') {
             window.location.reload();
           } else {
             navigate('/');
           }
-        }, 3000);
+        }, 2000);
         return () => clearTimeout(timerId);
       }
     }
@@ -89,6 +89,7 @@ export default function App() {
                   <Route path="/form" element={<ProcessForm />} />
                   <Route path="/request" element={<PunctureRequestForm />} />
                   <Route path="/nearby-mechanics" element={<NearbyMechanics />} />
+                  <Route path="/ms" element={<MechanicRegistration />} />
 
                   <Route element={<RequestLayout />}>
                     <Route path="/finding/:request_id" element={<FindingMechanic />} />
