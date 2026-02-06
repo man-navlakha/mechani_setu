@@ -16,6 +16,7 @@ import ProfilePage from "./Page/ProfilePage";
 import MechanicFound from './Page/MechanicFound';
 import RequestLayout from './Page/RequestLayout';
 import FindingMechanic from './Page/FindingMechanic';
+import NearbyMechanics from './Page/NearbyMechanics';
 import Protected from './ProtectedRoute';
 import { WebSocketProvider, useWebSocket } from './context/WebSocketContext';
 
@@ -27,26 +28,33 @@ const GlobalSocketHandler = () => {
   useEffect(() => {
     if (!lastMessage) return;
 
-    const jobFinishedOrNotFound = lastMessage.type === 'job_completed' || lastMessage.type === 'job_cancelled' || lastMessage.type === 'job_cancelled_notification' || lastMessage.type === 'no_mechanic_found';
-    if (jobFinishedOrNotFound) {
+    const jobFinished = lastMessage.type === 'job_completed' || lastMessage.type === 'job_cancelled' || lastMessage.type === 'job_cancelled_notification';
+    const noMechanicFound = lastMessage.type === 'no_mechanic_found';
+
+    if (jobFinished || noMechanicFound) {
       console.log(`GLOBAL HANDLER: Job event type "${lastMessage.type}". Clearing active job from localStorage.`);
 
       // Show appropriate toast message
-      if (lastMessage.type === 'no_mechanic_found') {
-        toast.error(lastMessage.message || 'Could not find an available mechanic.');
+      if (noMechanicFound) {
+        toast.error(lastMessage.message || 'Could not find an available mechanic. Showing nearby alternatives.');
       } else {
         toast.success(lastMessage.message || 'The request has been resolved.');
       }
+
       const isOnJobRelatedPage = location.pathname.startsWith('/finding/') || location.pathname.startsWith('/mechanic-found/');
-     if (location.pathname === '/' || isOnJobRelatedPage) {
+
+      if (location.pathname === '/' || isOnJobRelatedPage) {
         // ✨ ADDED setTimeout ✨
         const timerId = setTimeout(() => {
-          if (location.pathname === '/') {
+          if (noMechanicFound) {
+            // Navigate to nearby mechanics page when no mechanic found
+            navigate('/nearby-mechanics');
+          } else if (location.pathname === '/') {
             window.location.reload();
           } else {
             navigate('/');
           }
-      }, 5000);
+        }, 3000);
         return () => clearTimeout(timerId);
       }
     }
@@ -61,7 +69,7 @@ export default function App() {
   return (
     <div className="App transition-all duration-500 ease-in-out bg-white">
       <Toaster position="top-right" reverseOrder={false} />
-{localStorage.getItem("activeJobData") && <a href={`/mechanic-found/${activeJob.request_id}`}> <div className='bg-blue-600 text-white font-bold min-w-screen w-full p-3' >Your active Order {activeJob.request_id}</div></a>}
+      {localStorage.getItem("activeJobData") && <a href={`/mechanic-found/${activeJob.request_id}`}> <div className='bg-blue-600 text-white font-bold min-w-screen w-full p-3' >Your active Order {activeJob.request_id}</div></a>}
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
@@ -80,6 +88,7 @@ export default function App() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/form" element={<ProcessForm />} />
                   <Route path="/request" element={<PunctureRequestForm />} />
+                  <Route path="/nearby-mechanics" element={<NearbyMechanics />} />
 
                   <Route element={<RequestLayout />}>
                     <Route path="/finding/:request_id" element={<FindingMechanic />} />

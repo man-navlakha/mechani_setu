@@ -192,9 +192,14 @@ export default function MechanicFound() {
         navigate('/');
         break;
       case 'no_mechanic_found':
-        toast.error(lastMessage.message || "No mechanic could be found.");
+        toast.error(lastMessage.message || "No mechanic could be found. Showing nearby alternatives.");
         clearActiveJobData();
-        navigate('/');
+        navigate('/nearby-mechanics', {
+          state: {
+            latitude: userLocation?.lat,
+            longitude: userLocation?.lng
+          }
+        });
         break;
       case 'mechanic_arrived':
         toast.success("Mechanic has arrived!");
