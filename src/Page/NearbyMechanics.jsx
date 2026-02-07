@@ -5,7 +5,7 @@ import {
     Phone, MapPin, CheckCircle, XCircle, Wifi, WifiOff,
     ArrowLeft, RefreshCw, Navigation, Store, User,
     Clock, Star, Shield, ChevronRight, X, Mail,
-    Zap, AlertCircle
+    Zap, AlertCircle, Settings, Crosshair, Target
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import maplibregl from 'maplibre-gl';
@@ -26,11 +26,14 @@ export default function NearbyMechanics() {
     const [totalFound, setTotalFound] = useState(0);
     const [selectedMechanic, setSelectedMechanic] = useState(null);
     const [activeTab, setActiveTab] = useState('all'); // 'all', 'online', 'offline'
+    const [showSettings, setShowSettings] = useState(false);
+    const [isChangingLocation, setIsChangingLocation] = useState(false);
 
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const userMarkerRef = useRef(null);
     const mechanicMarkersRef = useRef([]);
+    const tempMarkerRef = useRef(null);
 
     // Load user location
     useEffect(() => {
@@ -86,6 +89,18 @@ export default function NearbyMechanics() {
             const data = await response.json();
 
             if (data.success) {
+                // Debug: Log the first mechanic to see data structure
+                if (data.mechanics && data.mechanics.length > 0) {
+                    console.log('📊 Sample Mechanic Data:', data.mechanics[0]);
+                    console.log('📞 Phone number path check:', {
+                        'mechanic.mobile': data.mechanics[0].mobile,
+                        'mechanic.mechanic.mobile': data.mechanics[0].mechanic?.mobile,
+                        'mechanic.phone': data.mechanics[0].phone,
+                        'mechanic.mechanic.phone': data.mechanics[0].mechanic?.phone,
+                        'mechanic.contact_number': data.mechanics[0].contact_number,
+                        'Full mechanic object': data.mechanics[0]
+                    });
+                }
                 setMechanics(data.mechanics || []);
                 setTotalFound(data.total_found || 0);
                 setSearchRadius(data.search_radius_km || 10);
@@ -193,6 +208,9 @@ export default function NearbyMechanics() {
 
                 addMechanicMarkers(map);
             });
+
+            // Add click handler for changing location
+            map.on('click', handleMapClick);
         } else {
             // Update radius circle if it exists
             const map = mapInstanceRef.current;
@@ -282,7 +300,7 @@ export default function NearbyMechanics() {
             `;
 
             const img = document.createElement('img');
-            img.src = mech.mechanic?.profile_pic || '/ms.png';
+            img.src = mech.profile_photo || '/ms.png';
             img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
             img.onerror = () => { img.src = '/ms.png'; };
             circle.appendChild(img);
@@ -404,6 +422,79 @@ export default function NearbyMechanics() {
 
     const handleGoBack = () => navigate('/');
 
+    // Handle map click for changing user location
+    const handleMapClick = (e) => {
+        if (!isChangingLocation) return;
+
+        const { lng, lat } = e.lngLat;
+
+        // Create temporary marker if it doesn't exist
+        if (!tempMarkerRef.current) {
+            const tempEl = document.createElement('div');
+            tempEl.innerHTML = `<div style="
+                width: 28px; height: 28px;
+                margin-left: -14px;
+                margin-top: -14px;
+                background: linear-gradient(135deg, #f97316, #ea580c);
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 4px 14px rgba(249, 115, 22, 0.6);
+                animation: pulse 1s infinite;
+            "></div>`;
+            tempMarkerRef.current = new maplibregl.Marker({ element: tempEl })
+                .setLngLat([lng, lat])
+                .addTo(mapInstanceRef.current);
+        } else {
+            tempMarkerRef.current.setLngLat([lng, lat]);
+        }
+    };
+
+    // Confirm new location
+    const confirmLocationChange = () => {
+        if (!tempMarkerRef.current) return;
+
+        const newLngLat = tempMarkerRef.current.getLngLat();
+        setUserLocation({ lat: newLngLat.lat, lng: newLngLat.lng });
+
+        // Update user marker
+        if (userMarkerRef.current) {
+            userMarkerRef.current.setLngLat([newLngLat.lng, newLngLat.lat]);
+        }
+
+        // Remove temp marker
+        tempMarkerRef.current.remove();
+        tempMarkerRef.current = null;
+
+        // Exit location change mode
+        setIsChangingLocation(false);
+        toast.success('Location updated successfully!');
+    };
+
+    // Cancel location change
+    const cancelLocationChange = () => {
+        if (tempMarkerRef.current) {
+            tempMarkerRef.current.remove();
+            tempMarkerRef.current = null;
+        }
+        setIsChangingLocation(false);
+    };
+
+    // Handle radius change
+    const handleRadiusChange = (newRadius) => {
+        setSearchRadius(Number(newRadius));
+        toast.success(`Search radius set to ${newRadius} km`);
+    };
+
+    // Start location change mode
+    const startLocationChange = () => {
+        setIsChangingLocation(true);
+        setShowSettings(false);
+        toast('Click on the map to set your new location', {
+            icon: '📍',
+            duration: 3000
+        });
+    };
+
     // Filter mechanics based on active tab
     const filteredMechanics = mechanics.filter(m => {
         if (activeTab === 'online') return m.status === 'ONLINE';
@@ -443,8 +534,8 @@ export default function NearbyMechanics() {
             ring-2 ring-offset-2 ${isOnline ? 'ring-green-400' : 'ring-gray-200'}
             transition-all duration-300 group-hover:ring-offset-4`}>
                             <img
-                                src={mechanic.mechanic?.profile_pic || '/ms.png'}
-                                alt={mechanic.mechanic?.name || 'Mechanic'}
+                                src={mechanic.profile_photo || '/ms.png'}
+                                alt={mechanic.full_name || 'Mechanic'}
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -461,7 +552,7 @@ export default function NearbyMechanics() {
                     <div className="flex-grow min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                             <h3 className="text-base lg:text-lg font-bold text-gray-900 truncate">
-                                {mechanic.mechanic?.name || 'Unknown'}
+                                {mechanic.full_name || 'Unknown'}
                             </h3>
                         </div>
 
@@ -508,7 +599,7 @@ export default function NearbyMechanics() {
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                handleCallMechanic(mechanic.mechanic?.mobile);
+                                handleCallMechanic(mechanic.phone);
                             }}
                             className={`w-11 h-11 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl 
                        flex items-center justify-center transition-all duration-300
@@ -606,8 +697,8 @@ export default function NearbyMechanics() {
                                 <div className={`w-24 h-24 lg:w-28 lg:h-28 rounded-2xl overflow-hidden
             ring-4 ring-white shadow-xl ${isOnline ? 'ring-green-100' : 'ring-gray-100'}`}>
                                     <img
-                                        src={mechanic.mechanic?.profile_pic || '/ms.png'}
-                                        alt={mechanic.mechanic?.name}
+                                        src={mechanic.profile_photo || '/ms.png'}
+                                        alt={mechanic.full_name}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
@@ -625,7 +716,7 @@ export default function NearbyMechanics() {
                             {/* Name & Shop */}
                             <div className="text-center mb-6">
                                 <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-1">
-                                    {mechanic.mechanic?.name}
+                                    {mechanic.full_name}
                                 </h2>
                                 <p className="text-gray-500 flex items-center justify-center gap-1.5">
                                     <Store size={14} />
@@ -661,40 +752,47 @@ export default function NearbyMechanics() {
 
                             {/* Details Card */}
                             <div className="bg-gray-50 rounded-2xl p-4 mb-6 space-y-3">
+                                {/* Address - Always shown */}
                                 <div className="flex items-start gap-3">
                                     <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
                                         <MapPin size={16} className="text-gray-500" />
                                     </div>
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="text-xs text-gray-400 uppercase tracking-wide">Address</p>
                                         <p className="text-sm text-gray-700">{mechanic.shop_address}</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
-                                        <Phone size={16} className="text-gray-500" />
+                                {/* Phone - Only shown if available */}
+                                {mechanic.phone && (
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                                            <Phone size={16} className="text-gray-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs text-gray-400 uppercase tracking-wide">Phone</p>
+                                            <p className="text-sm text-gray-700 font-medium">{mechanic.phone}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 uppercase tracking-wide">Phone</p>
-                                        <p className="text-sm text-gray-700 font-medium">{mechanic.mechanic?.mobile || 'Not available'}</p>
-                                    </div>
-                                </div>
+                                )}
 
-                                <div className="flex items-start gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
-                                        <Mail size={16} className="text-gray-500" />
+                                {/* Email - Only shown if available */}
+                                {mechanic.email && (
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                                            <Mail size={16} className="text-gray-500" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs text-gray-400 uppercase tracking-wide">Email</p>
+                                            <p className="text-sm text-gray-700">{mechanic.email}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 uppercase tracking-wide">Email</p>
-                                        <p className="text-sm text-gray-700">{mechanic.mechanic?.email || 'Not available'}</p>
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Call Button */}
                             <button
-                                onClick={() => handleCallMechanic(mechanic.mechanic?.mobile)}
+                                onClick={() => handleCallMechanic(mechanic.phone)}
                                 disabled={!isOnline}
                                 className={`w-full py-4 rounded-2xl font-bold text-lg transition-all duration-300
                            flex items-center justify-center gap-2
@@ -704,7 +802,7 @@ export default function NearbyMechanics() {
                                     }`}
                             >
                                 <Phone size={20} />
-                                {isOnline ? `Call ${mechanic.mechanic?.name?.split(' ')[0]} ` : 'Currently Unavailable'}
+                                {isOnline ? `Call ${mechanic.full_name?.split(' ')[0]} ` : 'Currently Unavailable'}
                             </button>
 
                             {!isOnline && (
@@ -761,7 +859,105 @@ export default function NearbyMechanics() {
                     {/* Map Section */}
                     <div className="lg:col-span-2 mb-4 lg:mb-0 lg:sticky lg:top-24 lg:h-[calc(100vh-120px)]">
                         <div className="bg-white rounded-2xl lg:rounded-3xl shadow-lg overflow-hidden h-56 lg:h-full relative">
-                            <div ref={mapContainerRef} className="w-full h-full" />
+                            <div ref={mapContainerRef} className="w-full h-full" style={{ cursor: isChangingLocation ? 'crosshair' : 'grab' }} />
+
+                            {/* Location Change Mode Overlay */}
+                            {isChangingLocation && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="absolute top-3 left-3 right-3 bg-orange-500 text-white px-4 py-3 rounded-xl shadow-lg border-2 border-white"
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Crosshair size={18} className="animate-pulse" />
+                                            <span className="text-sm font-semibold">Click on map to set location</span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={confirmLocationChange}
+                                                disabled={!tempMarkerRef.current}
+                                                className="px-3 py-1 bg-white text-orange-600 rounded-lg text-xs font-bold hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                ✓ Confirm
+                                            </button>
+                                            <button
+                                                onClick={cancelLocationChange}
+                                                className="px-3 py-1 bg-white/20 text-white rounded-lg text-xs font-bold hover:bg-white/30 transition-colors"
+                                            >
+                                                ✕ Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Settings Panel */}
+                            <AnimatePresence>
+                                {showSettings && !isChangingLocation && (
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-200 min-w-[280px]"
+                                    >
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <Settings size={16} className="text-blue-500" />
+                                                Search Settings
+                                            </h3>
+                                            <button
+                                                onClick={() => setShowSettings(false)}
+                                                className="w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                                            >
+                                                <X size={14} className="text-gray-400" />
+                                            </button>
+                                        </div>
+
+                                        {/* Radius Control */}
+                                        <div className="mb-4">
+                                            <label className="text-xs font-semibold text-gray-700 mb-2 block">
+                                                Search Radius: {searchRadius} km
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="1"
+                                                max="50"
+                                                value={searchRadius}
+                                                onChange={(e) => handleRadiusChange(e.target.value)}
+                                                className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer"
+                                                style={{
+                                                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(searchRadius / 50) * 100}%, #dbeafe ${(searchRadius / 50) * 100}%, #dbeafe 100%)`
+                                                }}
+                                            />
+                                            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                                                <span>1 km</span>
+                                                <span>25 km</span>
+                                                <span>50 km</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Change Location Button */}
+                                        <button
+                                            onClick={startLocationChange}
+                                            className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                                        >
+                                            <Target size={16} />
+                                            Change Location
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Settings Toggle Button */}
+                            {!isChangingLocation && (
+                                <button
+                                    onClick={() => setShowSettings(!showSettings)}
+                                    className="absolute top-3 left-3 w-10 h-10 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 flex items-center justify-center hover:bg-white transition-all duration-200 hover:scale-105"
+                                >
+                                    <Settings size={18} className={`text-blue-500 transition-transform duration-300 ${showSettings ? 'rotate-90' : ''}`} />
+                                </button>
+                            )}
 
                             {/* Map Legend */}
                             <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm rounded-xl p-2.5 lg:p-3 shadow-lg border border-gray-100">
