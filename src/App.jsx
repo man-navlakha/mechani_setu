@@ -20,6 +20,7 @@ import NearbyMechanics from './Page/NearbyMechanics';
 import MechanicRegistration from './Page/MechanicRegistration';
 import MechanicList from './Page/MechanicList';
 import MechanicDetail from './Page/MechanicDetail';
+import RCInfo from './Page/RCInfo';
 import Protected from './ProtectedRoute';
 import { WebSocketProvider, useWebSocket } from './context/WebSocketContext';
 
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/verify" element={<OTP />} />
         <Route path="/logout" element={<Logout />} />
+        <Route path="/vehicle-rc" element={<RCInfo />} />
 
         {/* Temporary Public Routes for Testing */}
         <Route path="/nearby-mechanics" element={<NearbyMechanics />} />

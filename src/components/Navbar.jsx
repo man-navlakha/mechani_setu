@@ -1,7 +1,7 @@
 // File: src/components/Navbar.jsx
 import React, { useState, useEffect } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogIn, UserPlus, LogOut } from "lucide-react";
+import { Menu, X, User, LogIn, UserPlus, LogOut, Search } from "lucide-react";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,7 +32,7 @@ export default function Navbar() {
   }, []);
 
 
- const handleLogout = () => {
+  const handleLogout = () => {
     navigate("/logout");
   };
 
@@ -60,6 +60,15 @@ export default function Navbar() {
     </>
   );
 
+  const publicLinks = (
+    <>
+      <NavLink to="/vehicle-rc" className={getActiveClassName}>
+        <Search size={18} />
+        RC Check
+      </NavLink>
+    </>
+  );
+
 
   return (
     <header className="w-full fixed top-0 left-0 z-50 bg-slate-200/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
@@ -75,7 +84,8 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <nav className="hidden md:flex items-center gap-2">
-          {authenticatedLinks}
+          {publicLinks}
+          {isAuthenticated && authenticatedLinks}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -93,7 +103,8 @@ export default function Navbar() {
       {menuOpen && (
         <nav className="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg">
           <div className="flex flex-col gap-1 p-4" onClick={() => setMenuOpen(false)}>
-          {authenticatedLinks}
+            {publicLinks}
+            {isAuthenticated && authenticatedLinks}
           </div>
         </nav>
       )}
