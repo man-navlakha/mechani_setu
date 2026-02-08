@@ -29,6 +29,10 @@ export default function NearbyMechanics() {
     const [showSettings, setShowSettings] = useState(false);
     const [isChangingLocation, setIsChangingLocation] = useState(false);
 
+    // Ad Modal State
+    const [showAdModal, setShowAdModal] = useState(false);
+    const [selectedAdTitle, setSelectedAdTitle] = useState('');
+
     const mapContainerRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const userMarkerRef = useRef(null);
@@ -430,6 +434,67 @@ export default function NearbyMechanics() {
                 }
             });
             map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 1000 });
+        }
+
+        // Add 2-3 More "Map Ads" placeholders as requested
+        if (userLocation) {
+            const adPlaceholders = [
+                { text: "Your Ad here", offsetLng: 0.005, offsetLat: 0.005, color: "#f59e0b" },
+                { text: "Business On Map", offsetLng: -0.005, offsetLat: 0.005, color: "#ec4899" },
+                { text: "Ad here", offsetLng: 0.008, offsetLat: -0.005, color: "#8b5cf6" },
+                { text: "Ad Now", offsetLng: -0.008, offsetLat: -0.008, color: "#ef4444" }
+            ];
+
+            adPlaceholders.forEach(ad => {
+                const adEl = document.createElement('div');
+                adEl.style.cssText = `
+                    position: absolute;
+                    background: ${ad.color};
+                    color: white;
+                    padding: 8px 14px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: 900;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                    border: 2px solid white;
+                    cursor: pointer;
+                    white-space: nowrap;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 1px;
+                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    animation: pulse 2s infinite ease-in-out;
+                `;
+
+                adEl.innerHTML = `
+                    <div style="font-size: 7px; opacity: 0.7; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">PROMOTED</div>
+                    <div>${ad.text}</div>
+                `;
+
+                adEl.onmouseenter = () => {
+                    adEl.style.transform = 'translate(-40px, -40px) scale(0)';
+                    adEl.style.opacity = '0';
+                    adEl.style.zIndex = '2000';
+                };
+                adEl.onmouseleave = () => {
+                    adEl.style.transform = 'translate(0, 0) scale(1)';
+                    adEl.style.opacity = '1';
+                    adEl.style.zIndex = 'auto';
+                    adEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+                };
+
+                adEl.onclick = () => {
+                    setSelectedAdTitle(ad.text);
+                    setShowAdModal(true);
+                };
+
+                const marker = new maplibregl.Marker({ element: adEl })
+                    .setLngLat([userLocation.lng + ad.offsetLng, userLocation.lat + ad.offsetLat])
+                    .addTo(map);
+
+                mechanicMarkersRef.current.push(marker);
+            });
         }
     };
 
@@ -1111,6 +1176,65 @@ export default function NearbyMechanics() {
             {selectedMechanic && (
                 <MechanicModal mechanic={selectedMechanic} onClose={() => setSelectedMechanic(null)} />
             )}
+
+            {/* Ad Modal */}
+            <AnimatePresence>
+                {showAdModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
+                        >
+                            <button
+                                onClick={() => setShowAdModal(false)}
+                                className="absolute top-6 right-6 p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <Target size={32} />
+                                </div>
+                                <h3 className="text-2xl font-black text-gray-900">{selectedAdTitle}</h3>
+                                <p className="text-gray-500 text-sm">Grow your business by advertising with Mechanic Setu.</p>
+                            </div>
+
+                            <form onSubmit={(e) => { e.preventDefault(); toast.success('Interest registered!'); setShowAdModal(false); }}>
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Business Name</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Your Business LTD"
+                                            className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-bold"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Contact Phone</label>
+                                        <input
+                                            type="tel"
+                                            placeholder="+91 00000 00000"
+                                            className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-bold"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    Get Pricing & Info
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Custom Scrollbar Styles */}
             <style>{`

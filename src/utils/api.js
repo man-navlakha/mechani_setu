@@ -22,13 +22,25 @@ function subscribeTokenRefresh(cb) {
   refreshSubscribers.push(cb);
 }
 
+// Request interceptor: Attach Bearer token to every request if it exists
+api.interceptors.request.use(
+  (config) => {
+    const accessToken = Cookies.get("access");
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     // Prevent infinite loop if refresh request itself fails
-    const isRefreshRequest = originalRequest.url.includes("/token/refresh/");
+    const isRefreshRequest = originalRequest.url.includes("/auth/refresh");
 
     if (
       error.response?.status === 401 &&
@@ -48,7 +60,8 @@ api.interceptors.response.use(
         const refreshToken = Cookies.get("refresh");
         const csrftoken = Cookies.get("csrftoken"); // Get CSRF token
 
-        await axios.post("https://mechanic-setu-backend.vercel.app/api/auth/refresh",
+        // This stays on port 5173, letting Vite proxy handle the redirect to 3000.
+        const res = await axios.post("/api/auth/refresh",
           { refresh: refreshToken },
           {
             withCredentials: true,
@@ -58,18 +71,32 @@ api.interceptors.response.use(
           }
         );
 
+        // Sync tokens manually into cookies if the backend returned them in the body
+        if (res.data?.access) {
+          Cookies.set("access", res.data.access);
+        }
+        if (res.data?.refresh) {
+          Cookies.set("refresh", res.data.refresh);
+        }
+
         isRefreshing = false;
         onRefreshed();
         Cookies.set("Logged", true);
+
+        // Update the header for the retried request
+        if (res.data?.access) {
+          originalRequest.headers.Authorization = `Bearer ${res.data.access}`;
+        }
+
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-        Cookies.set("Logged", false)
+        Cookies.set("Logged", false);
+        Cookies.remove("access");
+        Cookies.remove("refresh");
 
-        // Redirect only if not already on login page
         if (!window.location.pathname.includes("/login")) {
           window.location.href = "/login";
-          // console.log("/auth/login")
         }
 
         return Promise.reject(refreshError);

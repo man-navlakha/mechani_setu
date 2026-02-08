@@ -140,11 +140,44 @@ const OrderHistoryCard = React.memo(({ order, onBookAgain }) => {
         </div>
     );
 });
+
+const VehicleCard = React.memo(({ vehicle }) => {
+    return (
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm mb-4">
+            <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                        <Car size={24} className="text-blue-600" />
+                    </div>
+                    <div>
+                        <p className="font-bold text-gray-800 tracking-tight uppercase">{vehicle.license_plate}</p>
+                        <p className="text-xs text-blue-600 font-bold uppercase">{vehicle.brand_model}</p>
+                    </div>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase ${vehicle.is_insurance_expired ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                    {vehicle.is_insurance_expired ? 'Insurance Expired' : 'Insurance Active'}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="bg-gray-50 p-2 rounded-lg">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Expiry Date</p>
+                    <p className="text-sm font-bold text-gray-700">{vehicle.insurance_expiry || 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded-lg">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">RC Status</p>
+                    <p className="text-sm font-bold text-green-600">{vehicle.rc_status || 'ACTIVE'}</p>
+                </div>
+            </div>
+        </div>
+    );
+});
 const ProfilePage = () => {
     const [user, setUser] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editedUser, setEditedUser] = useState(null);
     const [orderHistory, setOrderHistory] = useState([]);
+    const [myVehicles, setMyVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate(); // ✅ 2. Initialize navigate
 
@@ -169,9 +202,20 @@ const ProfilePage = () => {
             }
         };
 
+        const fetchMyVehicles = async () => {
+            try {
+                const response = await api.get('/vehicle/my-vehicles');
+                if (response.data.success) {
+                    setMyVehicles(response.data.data || []);
+                }
+            } catch (error) {
+                console.error("Failed to fetch user vehicles", error);
+            }
+        };
+
         const fetchData = async () => {
             setLoading(true);
-            await Promise.all([fetchUserData(), fetchOrderHistory()]);
+            await Promise.all([fetchUserData(), fetchOrderHistory(), fetchMyVehicles()]);
             setLoading(false);
         }
 
@@ -218,7 +262,7 @@ const ProfilePage = () => {
     }, []);
 
     const handleLogout = () => {
-      navigate("/logout");
+        navigate("/logout");
     };
 
     if (loading || !user) {
@@ -281,7 +325,7 @@ const ProfilePage = () => {
                                     aria-label="Save changes"
                                 >
                                     <FaSave className="text-white" /> Save
-                                </button> 
+                                </button>
                                 <button
                                     onClick={handleCancel}
                                     className="p-3 bg-red-400 flex items-center gap-2 text-white rounded-full shadow-[3px_3px_6px_#BABECC,-3px_-3px_6px_#FFFFFF] hover:shadow-[inset_1px_1px_2px_#BABECC,inset_-1px_-1px_2px_#FFFFFF] transition"
@@ -303,13 +347,43 @@ const ProfilePage = () => {
                 </div>
 
                 {/* --- Account Actions Card --- */}
-                <div className="bg-gray-200 rounded-2xl shadow-[3px_3px_6px_#BABECC,-3px_-3px_6px_#FFFFFF] p-6 mb-6 flex flex-col justify-center">
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full flex items-center justify-center p-3 bg-red-400 text-white rounded-xl shadow-[3px_3px_6px_#BABECC,-3px_-3px_6px_#FFFFFF] hover:shadow-[inset_1px_1px_2px_#BABECC,inset_-1px_-1px_2px_#FFFFFF] transition font-bold"
+                <div className="bg-gray-200 rounded-2xl shadow-[3px_3px_6px_#BABECC,-3px_-3px_6px_#FFFFFF] p-6 mb-8 flex flex-col justify-center">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center p-3 bg-red-400 text-white rounded-xl shadow-[3px_3px_6px_#BABECC,-3px_-3px_6px_#FFFFFF] hover:shadow-[inset_1px_1px_2px_#BABECC,inset_-1px_-1px_2px_#FFFFFF] transition font-bold"
                     >
                         <FaSignOutAlt className="mr-3" /> Logout
                     </button>
+                </div>
+
+                {/* --- My Vehicles Card --- */}
+                <div className="bg-gray-200 rounded-2xl shadow-[3px_3px_6px_#BABECC,-3px_-3px_6px_#FFFFFF] p-6 mb-8">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-semibold text-gray-800">My Vehicles</h3>
+                        <button
+                            onClick={() => navigate('/vehicle-dashboard')}
+                            className="text-xs font-black text-blue-600 uppercase tracking-widest hover:underline"
+                        >
+                            Manage All
+                        </button>
+                    </div>
+                    <div className="space-y-4">
+                        {myVehicles.length > 0 ? (
+                            myVehicles.slice(0, 3).map(vehicle => (
+                                <VehicleCard key={vehicle.id} vehicle={vehicle} />
+                            ))
+                        ) : (
+                            <p className="text-gray-500 text-center py-4">No vehicles linked to your profile.</p>
+                        )}
+                        {myVehicles.length > 3 && (
+                            <button
+                                onClick={() => navigate('/vehicle-dashboard')}
+                                className="w-full py-3 bg-gray-100 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-widest border border-gray-300 transition-all hover:bg-gray-50"
+                            >
+                                View {myVehicles.length - 3} More Vehicles
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* --- Order History Card --- */}

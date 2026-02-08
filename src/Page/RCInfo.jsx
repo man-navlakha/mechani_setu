@@ -151,6 +151,11 @@ const RCInfo = () => {
                                     <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">
                                         {rcData.fuel_type || 'N/A'}
                                     </span>
+                                    {rcData.is_insurance_expired && (
+                                        <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-black rounded-full flex items-center">
+                                            <AlertCircle size={12} className="mr-1" /> INSURANCE EXPIRED
+                                        </span>
+                                    )}
                                 </div>
                                 <h2 className="text-3xl font-black text-gray-900 mb-1">{rcData.license_plate || 'N/A'}</h2>
                                 <p className="text-xl font-bold text-blue-600 mb-1">{rcData.brand_model || 'N/A'}</p>
@@ -167,18 +172,30 @@ const RCInfo = () => {
                         </div>
 
                         {/* Details Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <InfoCard icon={User} label="Owner Name" value={rcData.owner_name} colorClass="indigo" />
                             <InfoCard icon={User} label="Father's Name" value={rcData.father_name} colorClass="indigo" />
-                            <InfoCard icon={Shield} label="Insurance Expiry" value={rcData.insurance_expiry} colorClass="green" />
+                            <InfoCard
+                                icon={rcData.is_insurance_expired ? AlertCircle : Shield}
+                                label="Insurance Status"
+                                value={rcData.is_insurance_expired ? 'EXPIRED' : 'ACTIVE'}
+                                colorClass={rcData.is_insurance_expired ? "red" : "green"}
+                            />
                             <InfoCard icon={Shield} label="Insurance Company" value={rcData.insurance_company} colorClass="green" />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <InfoCard icon={Shield} label="Insurance Expiry" value={rcData.insurance_expiry} colorClass="green" />
                             <InfoCard icon={Shield} label="Insurance Policy" value={rcData.insurance_policy} colorClass="green" />
                             <InfoCard icon={Calendar} label="Tax Valid Upto" value={rcData.tax_upto} colorClass="amber" />
                             <InfoCard icon={FileText} label="PUCC Valid Upto" value={rcData.pucc_upto} colorClass="purple" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                             <InfoCard icon={FileText} label="PUCC Number" value={rcData.pucc_number} colorClass="purple" />
+                            <InfoCard icon={Briefcase} label="Finance Status" value={rcData.is_financed === "1" ? "YES" : "NO"} colorClass="orange" />
+                            <InfoCard icon={Briefcase} label="Financer" value={rcData.financer} colorClass="orange" />
+                            <InfoCard icon={Shield} label="Norms" value={rcData.norms} colorClass="blue" />
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">

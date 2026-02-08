@@ -170,7 +170,63 @@ const MainPage = () => {
 
       adMarkersRef.current.push(marker);
     });
-  }, [mapAds, mapStatus]);
+
+    // Add 2-3 More "Map Ads" placeholders as requested
+    const adPlaceholders = [
+      { businessName: "Your Ad here", longitude: 0.005, latitude: 0.005, color: "#f59e0b" },
+      { businessName: "Business On Map", longitude: -0.005, latitude: 0.005, color: "#ec4899" },
+      { businessName: "Ad here", longitude: 0.008, latitude: -0.005, color: "#8b5cf6" },
+      { businessName: "Ad Now", longitude: -0.008, latitude: -0.008, color: "#ef4444" }
+    ];
+
+    if (userPosition) {
+      adPlaceholders.forEach(ad => {
+        const adEl = document.createElement('div');
+        adEl.style.cssText = `
+          position: absolute;
+          background: ${ad.color};
+          color: white;
+          padding: 8px 14px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 900;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+          border: 2px solid white;
+          cursor: pointer;
+          white-space: nowrap;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1px;
+          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: pulse 2s infinite ease-in-out;
+        `;
+
+        adEl.innerHTML = `
+          <div style="font-size: 7px; opacity: 0.7; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">PROMOTED</div>
+          <div>${ad.businessName}</div>
+        `;
+
+        adEl.onmouseenter = () => {
+          adEl.style.transform = 'translate(-40px, -40px) scale(0)';
+          adEl.style.opacity = '0';
+          adEl.style.zIndex = '2000';
+        };
+        adEl.onmouseleave = () => {
+          adEl.style.transform = 'translate(0, 0) scale(1)';
+          adEl.style.opacity = '1';
+          adEl.style.zIndex = 'auto';
+          adEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+        };
+
+        const marker = new maplibregl.Marker({ element: adEl })
+          .setLngLat([userPosition.lng + ad.longitude, userPosition.lat + ad.latitude])
+          .addTo(mapInstanceRef.current);
+
+        adMarkersRef.current.push(marker);
+      });
+    }
+  }, [mapAds, mapStatus, userPosition]);
 
   // Get user's live location
   const getUserLocation = () => {

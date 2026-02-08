@@ -6,6 +6,8 @@ import { useWebSocket } from '../context/WebSocketContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import OrderDetailsCard from '../components/OrderDetailsCard';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 export default function FindingMechanic() {
   const { request_id } = useParams();
@@ -16,6 +18,16 @@ export default function FindingMechanic() {
   const [isCancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState('');
   const [username, setUsername] = useState('User');
+  const [userLocation, setUserLocation] = useState(null);
+
+  // Ad Modal State
+  const [showAdModal, setShowAdModal] = useState(false);
+  const [selectedAdTitle, setSelectedAdTitle] = useState('');
+
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const userMarkerRef = useRef(null);
+  const adMarkersRef = useRef([]);
 
   const timerRef = useRef(null);
   const ConnectionStatus = () => {
@@ -47,6 +59,75 @@ export default function FindingMechanic() {
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, []);
+
+  // Get user location from local storage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('punctureRequestFormData');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.latitude && data.longitude) {
+          setUserLocation({ lat: data.latitude, lng: data.longitude });
+        }
+      }
+    } catch (err) {
+      console.error("Error loading job request data", err);
+    }
+  }, []);
+
+  // Initialize Map
+  useEffect(() => {
+    if (!mapContainerRef.current || !userLocation) return;
+    if (mapInstanceRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      center: [userLocation.lng, userLocation.lat],
+      zoom: 14,
+      style: `https://api.maptiler.com/maps/019b64a4-ef96-7e83-9a23-dde0df92b2ba/style.json?key=wf1HtIzvVsvPfvNrhwPz`,
+      attributionControl: false,
+    });
+    mapInstanceRef.current = map;
+
+    map.on('load', () => {
+      // User marker
+      const el = document.createElement('div');
+      el.innerHTML = `<div style="width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3); animation: pulse 2s infinite;"></div>`;
+      userMarkerRef.current = new maplibregl.Marker({ element: el })
+        .setLngLat([userLocation.lng, userLocation.lat])
+        .addTo(map);
+
+      // Ad Placeholders
+      const adPlaceholders = [
+        { businessName: "Your Ad here", longitude: 0.005, latitude: 0.005, color: "#f59e0b" },
+        { businessName: "Business On Map", longitude: -0.005, latitude: 0.005, color: "#ec4899" },
+        { businessName: "Ad here", longitude: 0.008, latitude: -0.005, color: "#8b5cf6" },
+        { businessName: "Ad Now", longitude: -0.008, latitude: -0.008, color: "#ef4444" }
+      ];
+
+      adPlaceholders.forEach(ad => {
+        const adEl = document.createElement('div');
+        adEl.style.cssText = `
+          background: ${ad.color};
+          color: white;
+          padding: 6px 10px;
+          border-radius: 10px;
+          font-size: 10px;
+          font-weight: 900;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+          border: 2px solid white;
+          white-space: nowrap;
+          text-align: center;
+          animation: pulse 2s infinite ease-in-out;
+        `;
+        adEl.innerHTML = `<div style="font-size: 6px; opacity: 0.8;">PROMOTED</div><div>${ad.businessName}</div>`;
+
+        new maplibregl.Marker({ element: adEl })
+          .setLngLat([userLocation.lng + ad.longitude, userLocation.lat + ad.latitude])
+          .addTo(map);
+      });
+    });
+  }, [userLocation]);
 
   // WebSocket subscription
   useEffect(() => {
@@ -186,6 +267,11 @@ export default function FindingMechanic() {
             <p className="text-gray-500">We're searching for the nearest available mechanic...</p>
           </div>
 
+          <div className="mb-6 rounded-2xl overflow-hidden h-40 border-2 border-white shadow-inner relative">
+            <div ref={mapContainerRef} className="w-full h-full" />
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent to-black/5" />
+          </div>
+
           <div className="space-y-4 mb-8">
             <div className={`flex justify-between items-center p-4 rounded-xl bg-gray-100 ${neumorphicInsetShadow}`}>
               <div className="flex items-center gap-3">
@@ -212,6 +298,65 @@ export default function FindingMechanic() {
           </div>
         </motion.div>
       </div>
+
+      {/* Ad Modal */}
+      <AnimatePresence>
+        {showAdModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-gray-800">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative"
+            >
+              <button
+                onClick={() => setShowAdModal(false)}
+                className="absolute top-6 right-6 p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Wrench size={32} />
+                </div>
+                <h3 className="text-2xl font-black text-gray-900">{selectedAdTitle}</h3>
+                <p className="text-gray-500 text-sm">Grow your business by advertising with Mechanic Setu.</p>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); toast.success('Interest registered!'); setShowAdModal(false); }}>
+                <div className="space-y-4 mb-6 text-left">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Business Name</label>
+                    <input
+                      type="text"
+                      placeholder="Your Business LTD"
+                      className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Contact Phone</label>
+                    <input
+                      type="tel"
+                      placeholder="+91 00000 00000"
+                      className="w-full px-6 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  Get Pricing & Info
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Cancellation Modal */}
       {isCancelModalOpen && (

@@ -169,6 +169,12 @@ const VehicleDetails = () => {
                                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md px-6 py-2 rounded-full border border-white shadow-xl flex items-center gap-2">
                                         <div className={`w-3 h-3 rounded-full ${vehicle.rc_status === 'ACTIVE' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                                         <span className="text-xs font-black tracking-widest text-gray-900 uppercase">RC {vehicle.rc_status || 'STATUS'}</span>
+                                        {vehicle.is_insurance_expired && (
+                                            <>
+                                                <div className="w-[1px] h-4 bg-gray-200" />
+                                                <span className="text-[10px] font-black tracking-widest text-red-600 uppercase">INSURANCE EXPIRED</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -179,8 +185,15 @@ const VehicleDetails = () => {
                             animate={{ opacity: 1, x: 0 }}
                             className="w-full lg:w-1/2 space-y-4"
                         >
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-black tracking-widest uppercase">
-                                <Shield size={14} /> Verified Database Record
+                            <div className="flex flex-wrap gap-2">
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-xs font-black tracking-widest uppercase">
+                                    <Shield size={14} /> Verified Database Record
+                                </div>
+                                {vehicle.is_insurance_expired && (
+                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full text-xs font-black tracking-widest uppercase">
+                                        <AlertCircle size={14} /> Insurance Expired
+                                    </div>
+                                )}
                             </div>
                             <h1 className="text-5xl lg:text-7xl font-black text-gray-900 leading-none tracking-tight">
                                 {vehicle.license_plate || vehicle.vehicleId}
@@ -229,6 +242,12 @@ const VehicleDetails = () => {
                             <SectionHeader icon={Shield} title="Compliance & Insurance" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <DetailCard icon={Shield} label="Insurance Company" value={vehicle.insurance_company} color="green" />
+                                <DetailCard
+                                    icon={vehicle.is_insurance_expired ? AlertCircle : Shield}
+                                    label="Insurance Status"
+                                    value={vehicle.is_insurance_expired ? 'EXPIRED' : 'ACTIVE'}
+                                    color={vehicle.is_insurance_expired ? "rose" : "green"}
+                                />
                                 <DetailCard icon={Clock} label="Insurance Expiry" value={vehicle.insurance_expiry} color="green" />
                                 <DetailCard icon={FileText} label="Policy Number" value={vehicle.insurance_policy} color="green" />
                                 <DetailCard icon={Calendar} label="Tax Paid Upto" value={vehicle.tax_upto} color="amber" />

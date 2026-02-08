@@ -25,7 +25,8 @@ const VehicleDashboard = () => {
     const fetchVehicles = async () => {
         setLoading(true);
         try {
-            const response = await api.get(`/vehicle/saved?search=${searchTerm}`);
+            // Updated to fetch user's own vehicles with insurance status
+            const response = await api.get(`/vehicle/my-vehicles?search=${searchTerm}`);
             if (response.data.success) {
                 setVehicles(response.data.data || []);
             }
@@ -141,7 +142,7 @@ const VehicleDashboard = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                     <div>
                         <h1 className="text-4xl font-black text-gray-900 tracking-tight">Vehicle Dashboard</h1>
-                        <p className="text-gray-500 font-medium">Manage and monitor all your saved RC information</p>
+                        <p className="text-gray-500 font-medium">Manage and monitor your personal vehicle profile</p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -149,14 +150,14 @@ const VehicleDashboard = () => {
                             onClick={() => setShowAddModal(true)}
                             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 whitespace-nowrap"
                         >
-                            <Plus size={20} /> Add New Vehicle
+                            <Plus size={20} /> Add To Profile
                         </button>
 
                         <div className="relative w-full md:w-96">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                placeholder="Search by Plate, Model or Owner..."
+                                placeholder="Search your vehicles..."
                                 className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all outline-none font-medium shadow-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -172,7 +173,7 @@ const VehicleDashboard = () => {
                     <div className="lg:col-span-2 space-y-4">
                         <div className="flex items-center justify-between mb-2">
                             <h3 className="font-bold text-gray-600 flex items-center gap-2">
-                                <Car size={18} /> {vehicles.length} Saved Vehicles
+                                <Car size={18} /> {vehicles.length} My Vehicles
                             </h3>
                             <button onClick={fetchVehicles} className="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-400">
                                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
@@ -212,9 +213,27 @@ const VehicleDashboard = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-xl font-black text-gray-900 tracking-wider uppercase">{v.vehicleId || v.license_plate}</h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="text-xl font-black text-gray-900 tracking-wider uppercase">{v.vehicleId || v.license_plate}</h4>
+                                                        {v.is_insurance_expired && (
+                                                            <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-black rounded-lg flex items-center gap-1">
+                                                                <AlertCircle size={10} /> EXPIRED
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-sm font-bold text-blue-600">{v.brand_model}</p>
-                                                    <p className="text-xs text-gray-400 font-medium">Owner: {v.owner_name}</p>
+                                                    <div className="flex items-center gap-3 mt-1">
+                                                        <p className="text-xs text-gray-400 font-medium">Owner: {v.owner_name}</p>
+                                                        {v.is_insurance_expired ? (
+                                                            <p className="text-xs text-red-400 font-bold flex items-center gap-1">
+                                                                <Shield size={10} /> Insurance Expired
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-xs text-green-400 font-bold flex items-center gap-1">
+                                                                <CheckCircle size={10} className="text-green-500" /> Insurance Active
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -283,7 +302,16 @@ const VehicleDashboard = () => {
 
                                             <div className="grid grid-cols-1 gap-3">
                                                 <DetailItem icon={User} label="Owner Name" value={selectedVehicle.owner_name} />
-                                                <DetailItem icon={Shield} label="Insurance Upto" value={selectedVehicle.insurance_expiry} />
+                                                <div className={`flex items-center space-x-3 p-3 rounded-xl border ${selectedVehicle.is_insurance_expired ? 'bg-red-50 border-red-100 text-red-600' : 'bg-green-50 border-green-100 text-green-600'}`}>
+                                                    <div className={`p-2 rounded-lg ${selectedVehicle.is_insurance_expired ? 'bg-red-100' : 'bg-green-100'}`}>
+                                                        <Shield size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] uppercase font-bold opacity-60 tracking-wider font-mono">Insurance Status</p>
+                                                        <p className="text-sm font-bold">{selectedVehicle.is_insurance_expired ? 'EXPIRED' : 'ACTIVE'}</p>
+                                                    </div>
+                                                </div>
+                                                <DetailItem icon={Shield} label="Expiry Date" value={selectedVehicle.insurance_expiry} />
                                                 <DetailItem icon={Calendar} label="Reg. Date" value={selectedVehicle.registration_date} />
                                                 <DetailItem icon={RefreshCw} label="Fuel Type" value={selectedVehicle.fuel_type} />
                                             </div>
