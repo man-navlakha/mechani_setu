@@ -80,16 +80,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/verify" element={<OTP />} />
         <Route path="/logout" element={<Logout />} />
-        <Route path="/vehicle-rc" element={<RCInfo />} />
-        <Route path="/dashboard/vehicles" element={<VehicleDashboard />} />
-        <Route path="/dashboard/vehicles/:id" element={<VehicleDetails />} />
 
-        {/* Temporary Public Routes for Testing */}
-        <Route path="/nearby-mechanics" element={<NearbyMechanics />} />
-        <Route path="/ms" element={<MechanicRegistration />} />
-        <Route path="/ms/list" element={<MechanicList />} />
-        <Route path="/ms/view/:id" element={<MechanicDetail />} />
-        <Route path="/ms/edit/:id" element={<MechanicRegistration />} />
+
+
 
         {/* All protected routes are nested here */}
         <Route
@@ -103,7 +96,15 @@ export default function App() {
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/form" element={<ProcessForm />} />
                   <Route path="/request" element={<PunctureRequestForm />} />
-                  <Route path="/request" element={<PunctureRequestForm />} />
+                  {/* Temporary Public Routes for Testing */}
+                  <Route path="/nearby-mechanics" element={<NearbyMechanics />} />
+                  <Route path="/ms" element={<MechanicRegistration />} />
+                  <Route path="/ms/list" element={<MechanicList />} />
+                  <Route path="/ms/view/:id" element={<MechanicDetail />} />
+                  <Route path="/ms/edit/:id" element={<MechanicRegistration />} />
+                  <Route path="/vehicle-rc" element={<RCInfo />} />
+                  <Route path="/dashboard/vehicles" element={<VehicleDashboard />} />
+                  <Route path="/dashboard/vehicles/:id" element={<VehicleDetails />} />
 
                   <Route element={<RequestLayout />}>
                     <Route path="/finding/:request_id" element={<FindingMechanic />} />
