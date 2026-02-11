@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
     Search, Car, Trash2, Eye, Filter,
     RefreshCw, ChevronRight, AlertCircle,
-    Calendar, User, MapPin, Shield, Plus, X
+    Calendar, User, MapPin, Shield, Plus, X, CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../utils/apiVercel';
