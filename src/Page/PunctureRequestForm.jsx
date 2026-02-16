@@ -1,6 +1,6 @@
 // PunctureRequestFormRedesigned.jsx
 import React, { useState, useEffect } from 'react'; // ✨ ADDED useEffect
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronRight,
@@ -51,6 +51,17 @@ const problems = {
     ],
 };
 
+const inferVehicleTypeFromClass = (vehicleClassRaw) => {
+    const vehicleClass = (vehicleClassRaw || '').toLowerCase();
+    if (vehicleClass.includes('cycle') || vehicleClass.includes('scooter') || vehicleClass.includes('two wheeler')) {
+        return 'bike';
+    }
+    if (vehicleClass.includes('truck') || vehicleClass.includes('heavy') || vehicleClass.includes('suv')) {
+        return 'truck';
+    }
+    return 'car';
+};
+
 // ✨ ADDED: Key for localStorage
 const FORM_STORAGE_KEY = 'punctureRequestFormData';
 
@@ -58,6 +69,7 @@ const FORM_STORAGE_KEY = 'punctureRequestFormData';
 // --- MAIN COMPONENT ---
 export default function PunctureRequestFormRedesigned() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [step, setStep] = useState(1);
 
     // ✨ MODIFIED: Initialize state from localStorage
@@ -91,6 +103,91 @@ export default function PunctureRequestFormRedesigned() {
     useEffect(() => {
         localStorage.setItem(FORM_STORAGE_KEY, JSON.stringify(formData));
     }, [formData]); // This runs every time the formData state changes
+
+    useEffect(() => {
+        const vehicleIdFromQuery = searchParams.get('vehicleId');
+        const serviceFromQuery = searchParams.get('service');
+
+        const serviceLabelMap = {
+            'emergency-breakdown': 'Emergency Breakdown',
+            'schedule-service': 'Schedule service',
+            'fuel-delivery': 'Fuel delivery',
+            'tow-service': 'Tow service',
+        };
+
+        const serviceLabel = serviceFromQuery
+            ? (serviceLabelMap[serviceFromQuery] ||
+                serviceFromQuery
+                    .split('-')
+                    .filter(Boolean)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(' '))
+            : null;
+
+        const fetchVehicleById = async (vehicleId) => {
+            try {
+                const response = await api.get('/vehicle/my-vehicle', { params: { id: vehicleId } });
+                const payload = response.data;
+                const vehicle =
+                    payload?.data && !Array.isArray(payload.data) ? payload.data :
+                        Array.isArray(payload?.data) ? payload.data[0] :
+                            payload;
+
+                if (!vehicle || typeof vehicle !== 'object') return null;
+                if (payload?.success === false) return null;
+                return vehicle;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const fetchVehicleFromList = async (vehicleId) => {
+            try {
+                const listResponse = await api.get('/vehicle/my-vehicles');
+                const payload = listResponse.data;
+                const vehicleList = Array.isArray(payload?.data)
+                    ? payload.data
+                    : Array.isArray(payload)
+                        ? payload
+                        : [];
+
+                return vehicleList.find((v) => String(v?.id) === String(vehicleId)) || null;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const prefillFromQuery = async () => {
+            if (!vehicleIdFromQuery && !serviceLabel) return;
+
+            if (serviceLabel) {
+                setFormData((prev) => ({
+                    ...prev,
+                    problem: serviceLabel,
+                }));
+            }
+
+            if (!vehicleIdFromQuery) return;
+
+            const vehicle =
+                (await fetchVehicleById(vehicleIdFromQuery)) ||
+                (await fetchVehicleFromList(vehicleIdFromQuery));
+
+            if (!vehicle) return;
+
+            setFormData((prev) => ({
+                ...prev,
+                fillMode: 'rc',
+                vehicleNumber: vehicle.license_plate || vehicle.vehicle_id || prev.vehicleNumber,
+                rcData: vehicle,
+                vehicleType: inferVehicleTypeFromClass(vehicle.class),
+            }));
+        };
+
+        prefillFromQuery();
+        // Intentionally not depending on formData to avoid overwriting user edits
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
 
     // Handler for location updates from PlacePickerGujarat
     const handleLocationChange = ({ address, latitude, longitude }) => {
@@ -259,13 +356,7 @@ const Step1_Vehicle = ({ formData, setFormData }) => {
                 const rcData = response.data.data || response.data;
 
                 // Try to auto-detect vehicle type
-                let vehicleType = 'car'; // Default
-                const vehicleClass = (rcData.class || '').toLowerCase();
-                if (vehicleClass.includes('cycle') || vehicleClass.includes('scooter') || vehicleClass.includes('two wheeler')) {
-                    vehicleType = 'bike';
-                } else if (vehicleClass.includes('truck') || vehicleClass.includes('heavy') || vehicleClass.includes('suv')) {
-                    vehicleType = 'truck';
-                }
+                const vehicleType = inferVehicleTypeFromClass(rcData.class);
 
                 setFormData(prev => ({
                     ...prev,
@@ -434,7 +525,15 @@ const Step2_Location = ({ formData, handleLocationChange }) => (
 const Step3_Service = ({ formData, setFormData }) => (
     <StepWrapper title="What Service Do You Need?">
         <div className="grid grid-cols-2 gap-4">
-            {problems[formData.vehicleType]?.map(problem => (
+            {(() => {
+                const list = problems[formData.vehicleType] || [];
+                const selected = formData.problem;
+                const selectedInList = !!selected && list.some((p) => p.name === selected);
+                const finalList = !selectedInList && selected
+                    ? [{ name: selected, icon: '✅' }, ...list]
+                    : list;
+
+                return finalList.map(problem => (
                 <SelectableCard
                     key={problem.name}
                     label={problem.name}
@@ -442,7 +541,8 @@ const Step3_Service = ({ formData, setFormData }) => (
                     isSelected={formData.problem === problem.name}
                     onClick={() => setFormData(prev => ({ ...prev, problem: problem.name }))}
                 />
-            ))}
+                ));
+            })()}
         </div>
         <textarea
             placeholder="Add any additional notes..."

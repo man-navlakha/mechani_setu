@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import LeftPanel from "../components/Leftpenal";
+import LeftPanel from "../components/LeftPanel";
 import { ArrowRight } from 'lucide-react';
 import api from "../utils/api";
 import maplibregl from 'maplibre-gl';
@@ -134,6 +134,52 @@ const MainPage = () => {
     map.on('load', () => {
       setMapStatus("loaded");
       getUserLocation();
+
+      // Add Ahmedabad geofence polygon (dark-blue line + subtle fill)
+      const geofenceCoords = [
+        [AH_BOUNDS.west, AH_BOUNDS.south],
+        [AH_BOUNDS.east, AH_BOUNDS.south],
+        [AH_BOUNDS.east, AH_BOUNDS.north],
+        [AH_BOUNDS.west, AH_BOUNDS.north],
+        [AH_BOUNDS.west, AH_BOUNDS.south]
+      ];
+
+      if (!map.getSource('ah-geofence')) {
+        map.addSource('ah-geofence', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [geofenceCoords]
+            }
+          }
+        });
+
+        // subtle fill so users can see the fenced area
+        map.addLayer({
+          id: 'ah-geofence-fill',
+          type: 'fill',
+          source: 'ah-geofence',
+          layout: {},
+          paint: {
+            'fill-color': '#0f4c81',
+            'fill-opacity': 0.06
+          }
+        });
+
+        // dark-blue boundary line
+        map.addLayer({
+          id: 'ah-geofence-line',
+          type: 'line',
+          source: 'ah-geofence',
+          layout: {},
+          paint: {
+            'line-color': '#0b4cca',
+            'line-width': 3
+          }
+        });
+      }
     });
   }, []);
 
