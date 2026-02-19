@@ -102,7 +102,7 @@ api.interceptors.response.use(
         Cookies.remove("access");
         Cookies.remove("refresh");
 
-        if (!window.location.pathname.includes("/login")) {
+        if (!originalRequest?.skipAuthRedirect && !window.location.pathname.includes("/login")) {
           window.location.href = "/login";
         }
 

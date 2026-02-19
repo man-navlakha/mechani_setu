@@ -13,6 +13,8 @@ import {
   Clock,
   Navigation
 } from 'lucide-react';
+import NavbarLanding from '../components/NavbarLanding';
+import api from '../utils/api';
 
 /* ---------------- HERO SECTION ---------------- */
 function Hero() {
@@ -319,8 +321,31 @@ function FAQ() {
 
 /* ---------------- MAIN COMPONENT ---------------- */
 export default function Home() {
+  const navigate = useNavigate();
+
+  // If the user is already logged in, don't show the landing page on `/`.
+  // `GET /api/core/me/` returns 200 when authenticated, and 401 when not.
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkAuthAndRedirect = async () => {
+      try {
+        await api.get('core/me/', { skipAuthRedirect: true });
+        if (isMounted) navigate('/home', { replace: true });
+      } catch {
+        // Not logged in — keep showing the public landing page.
+      }
+    };
+
+    checkAuthAndRedirect();
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
+
   return (
     <main className="bg-white min-h-screen">
+      <NavbarLanding />
       <Hero />
       <EmergencyActions />
       <NearbyMechanics />

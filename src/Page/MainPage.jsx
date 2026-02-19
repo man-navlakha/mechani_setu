@@ -25,13 +25,13 @@ const MainPage = () => {
   const [isWithinAhmedabad, setIsWithinAhmedabad] = useState(null);
 
   const AH_BOUNDS = {
-    south: 22.7,
-    north: 23.35,
-    west: 72.35,
-    east: 72.95,
+    south: 22.99,
+    north: 23.04,
+    west: 72.53,
+    east: 72.58,
   };
 
-  const AH_CENTER = { lat: 23.0225, lng: 72.5714 };
+  const AH_CENTER = { lat: 23.015, lng: 72.555 };
   const isWithinAhmedabadBounds = (lat, lng) =>
     lat >= AH_BOUNDS.south &&
     lat <= AH_BOUNDS.north &&
@@ -163,8 +163,8 @@ const MainPage = () => {
           source: 'ah-geofence',
           layout: {},
           paint: {
-            'fill-color': '#0f4c81',
-            'fill-opacity': 0.06
+            'fill-color': '#ef4444',
+            'fill-opacity': 0.1
           }
         });
 
@@ -175,7 +175,7 @@ const MainPage = () => {
           source: 'ah-geofence',
           layout: {},
           paint: {
-            'line-color': '#0b4cca',
+            'line-color': '#dc2626',
             'line-width': 3
           }
         });
@@ -420,12 +420,12 @@ const MainPage = () => {
       )}
       {isWithinAhmedabad === false && (
         <div className="absolute top-20 right-4 z-20 w-80 rounded-xl border border-red-300 bg-white/90 p-4 shadow-lg">
-          <p className="text-sm font-semibold text-red-600">Ahmedabad geofence</p>
+          <p className="text-sm font-semibold text-red-600">Service Area</p>
           <p className="text-xs text-gray-700 mt-1">
-            Mechanic Setu is currently active only inside Ahmedabad (lat 22.7–23.35, lng 72.35–72.95). Your current coordinates are outside that zone, so the map stays locked to Ahmedabad.
+            Mechanic Setu is currently active only in Anjali, Paldi, and Nehrunagar (Ambavadi). Your current coordinates are outside that zone.
           </p>
           <p className="mt-2 text-[11px] text-gray-500">
-            Please tap “Retry” (above) after moving inside Ahmedabad or manually explore the city area on the map to place a request.
+            Please tap “Retry” (above) after moving inside the service area or manually explore the area on the map to place a request.
           </p>
         </div>
       )}
