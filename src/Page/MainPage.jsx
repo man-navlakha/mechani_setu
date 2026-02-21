@@ -133,7 +133,7 @@ const MainPage = () => {
 
       try {
         const response = await fetch(
-          `http://localhost:3000/api/ms-mechanics/nearby?latitude=${userPosition.lat}&longitude=${userPosition.lng}&radius=${NEARBY_MECHANIC_RADIUS_KM}`
+          `https://mechanic-setu-backend.vercel.app/api/ms-mechanics/nearby?latitude=${userPosition.lat}&longitude=${userPosition.lng}&radius=${NEARBY_MECHANIC_RADIUS_KM}`
         );
         const data = await response.json();
         if (data?.success) {
