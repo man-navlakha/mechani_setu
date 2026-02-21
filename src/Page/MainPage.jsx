@@ -451,7 +451,6 @@ const MainPage = () => {
             center: [pos.lng, pos.lat],
             speed: 1.5,
             curve: 1,
-            zoom: 17 // ~500m scale to clearly show current location
           });
           if (userMarkerRef.current) {
             userMarkerRef.current.setLngLat([pos.lng, pos.lat]);

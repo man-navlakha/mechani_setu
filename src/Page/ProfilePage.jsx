@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { toast } from 'react-hot-toast';
+import { inferVehicleType } from '../utils/inferVehicleType';
 
 // --- Reusable Editable Field Component ---
 const EditableField = React.memo(({ label, name, value, onChange, type = "text" }) => (
@@ -33,14 +34,17 @@ const OrderHistoryCard = React.memo(({ order }) => {
         EXPIRED: "bg-gray-100 text-gray-700 border-gray-200",
     };
 
-    const vehicleTypeIcon = (type) => {
-        switch ((type || "").toLowerCase()) {
+    const vehicleTypeIcon = (record) => {
+        const type = inferVehicleType(record);
+        switch (type) {
             case "bike":
                 return <Bike className="w-5 h-5 text-gray-500" />;
             case "truck":
                 return <Truck className="w-5 h-5 text-gray-500" />;
             case "bus":
                 return <Bus className="w-5 h-5 text-gray-500" />;
+            case "autorickshaw":
+                return <Bus className="w-5 h-5 text-gray-500" />; // reuse bus icon for autos
             default:
                 return <Car className="w-5 h-5 text-gray-500" />;
         }
@@ -79,7 +83,7 @@ const OrderHistoryCard = React.memo(({ order }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-t border-gray-100">
                 <div className="flex items-center gap-3">
                     <div className="w-11 h-11 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                        {vehicleTypeIcon(order.vehicle_type || order.vehical_type)}
+                        {vehicleTypeIcon(order)}
                     </div>
                     <div>
                         <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold">Vehicle</p>
@@ -240,12 +244,7 @@ const ProfilePage = () => {
         const fetchOrderHistory = async (vehicleId) => {
             try {
                 const historyResponse = await api.get('/Profile/UserHistory/', {
-                    params: {
-                        limit: 50,
-                        offset: 0,
-                        status: 'PENDING',
-                        ...(vehicleId ? { vehicle_id: vehicleId } : {})
-                    }
+                   
                 });
                 const data = historyResponse.data;
                 setOrderHistory(data?.data || data || []);
