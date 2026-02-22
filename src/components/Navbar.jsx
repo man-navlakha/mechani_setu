@@ -181,7 +181,7 @@ export default function Navbar() {
                 Login
               </Link>
               <Link
-                to="/mechanic-registration"
+                to="/ms"
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
               >
                 <UserPlus size={16} />
