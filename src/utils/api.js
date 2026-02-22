@@ -25,7 +25,7 @@ function subscribeTokenRefresh(cb) {
 // Request interceptor: Attach Bearer token to every request if it exists
 api.interceptors.request.use(
   (config) => {
-    const accessToken = Cookies.get("access");
+    const accessToken = Cookies.get("access") || localStorage.getItem("access");
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -37,7 +37,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    const originalRequest = error?.config || {};
 
     // Prevent infinite loop if refresh request itself fails
     // or if the URL is undefined
@@ -63,7 +63,7 @@ api.interceptors.response.use(
         const csrftoken = Cookies.get("csrftoken"); // Get CSRF token
 
         // Correct Django endpoint for Render backend
-        const res = await axios.post("api/core/token/refresh/",
+        const res = await axios.post("/api/core/token/refresh/",
           { refresh: refreshToken },
           {
             withCredentials: true,
@@ -78,6 +78,7 @@ api.interceptors.response.use(
         // Sync tokens manually into cookies if the backend returned them in the body
         if (res.data?.access) {
           Cookies.set("access", res.data.access);
+          localStorage.setItem("access", res.data.access);
           // Also set Authorization header for subsequent requests
           api.defaults.headers.common['Authorization'] = `Bearer ${res.data.access}`;
         }
@@ -101,9 +102,11 @@ api.interceptors.response.use(
         Cookies.set("Logged", false);
         Cookies.remove("access");
         Cookies.remove("refresh");
+        localStorage.removeItem("access");
 
         if (!originalRequest?.skipAuthRedirect && !window.location.pathname.includes("/login")) {
-          window.location.href = "/login";
+          const redirectPath = `${window.location.pathname}${window.location.search}`;
+          window.location.href = `/login?redirect=${encodeURIComponent(redirectPath)}`;
         }
 
         return Promise.reject(refreshError);

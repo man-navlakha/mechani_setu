@@ -3,6 +3,21 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import api from '../../utils/api';
 
+const AUTH_REDIRECT_KEY = 'post_login_redirect';
+
+const isSafeRedirectPath = (path) =>
+  typeof path === 'string' &&
+  path.startsWith('/') &&
+  !path.startsWith('//') &&
+  !path.startsWith('/login') &&
+  !path.startsWith('/verify');
+
+const readSavedRedirectPath = () => {
+  if (typeof window === 'undefined') return null;
+  const savedPath = sessionStorage.getItem(AUTH_REDIRECT_KEY);
+  return isSafeRedirectPath(savedPath) ? savedPath : null;
+};
+
 const readCookie = (name) => {
   if (typeof document === 'undefined') return null;
   const nameEQ = `${name}=`;
@@ -32,8 +47,16 @@ const LoginPage = () => {
   // Memoize the redirect path from the query parameters
   const redirectPath = React.useMemo(() => {
     const params = new URLSearchParams(location.search);
-    return params.get('redirect') || '/';
+    const fromQuery = params.get('redirect');
+    if (isSafeRedirectPath(fromQuery)) return fromQuery;
+    return readSavedRedirectPath() || '/';
   }, [location.search]);
+
+  useEffect(() => {
+    if (isSafeRedirectPath(redirectPath)) {
+      sessionStorage.setItem(AUTH_REDIRECT_KEY, redirectPath);
+    }
+  }, [redirectPath]);
 
   // Check if the user is already authenticated
   const checkLoginStatus = useCallback(async () => {
@@ -43,6 +66,7 @@ const LoginPage = () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       await api.get("core/me/", { headers });
       // If it succeeds, the user is already logged in, so redirect them
+      sessionStorage.removeItem(AUTH_REDIRECT_KEY);
       navigate(redirectPath, { replace: true });
     } catch (err) {
       // User is not logged in, which is expected on this page.
@@ -65,7 +89,16 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const res = await api.post('/users/Login_SignUp/', { email }, { withCredentials: true });
-      navigate("/verify", { state: { key: res.data.key, id: res.data.id, status: res.data.status, email: email } });
+      const encodedRedirect = encodeURIComponent(redirectPath);
+      navigate(`/verify?redirect=${encodedRedirect}`, {
+        state: {
+          key: res.data.key,
+          id: res.data.id,
+          status: res.data.status,
+          email,
+          redirectPath,
+        },
+      });
     } catch (err) {
       console.error("Login failed:", err);
       setError(err.response?.data?.error || 'Login failed. Please check your email or try again.');
@@ -89,6 +122,7 @@ const LoginPage = () => {
       if (res.data.status === 'New User') {
         navigate('/form', { state: { status: "Google" } });
       } else {
+        sessionStorage.removeItem(AUTH_REDIRECT_KEY);
         navigate(redirectPath, { replace: true });
       }
     } catch (err) {

@@ -2,17 +2,31 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../utils/api';
 
+const AUTH_REDIRECT_KEY = 'post_login_redirect';
+
+const isSafeRedirectPath = (path) =>
+  typeof path === 'string' &&
+  path.startsWith('/') &&
+  !path.startsWith('//') &&
+  !path.startsWith('/login') &&
+  !path.startsWith('/verify');
+
 const OtpPage = () => {
   const [otp, setOtp] = useState(new Array(6).fill(''));
   const [error, setError] = useState('');
   const inputRefs = useRef([]);
   const verifyButtonRef = useRef(null); // Ref for the verify button
   const navigate = useNavigate();
-  const { state } = useLocation();
+  const location = useLocation();
+  const { state } = location;
 
   // State for timer functionality
   const [timer, setTimer] = useState(120);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
+
+  const queryParams = new URLSearchParams(location.search);
+  const redirectFromQuery = queryParams.get('redirect');
+  const savedRedirectPath = sessionStorage.getItem(AUTH_REDIRECT_KEY);
 
   const initialCtx = state || JSON.parse(sessionStorage.getItem('otp_ctx') || '{}');
   const [ctx, setCtx] = useState({
@@ -20,6 +34,11 @@ const OtpPage = () => {
     id: initialCtx?.id || null,
     status: initialCtx?.status || null,
     email: initialCtx?.email || null,
+    redirectPath:
+      (isSafeRedirectPath(redirectFromQuery) && redirectFromQuery) ||
+      (isSafeRedirectPath(initialCtx?.redirectPath) && initialCtx?.redirectPath) ||
+      (isSafeRedirectPath(savedRedirectPath) && savedRedirectPath) ||
+      '/',
   });
 
   useEffect(() => {
@@ -89,10 +108,15 @@ const OtpPage = () => {
     try {
       const payload = { key: ctx.key, id: ctx.id, otp: code };
       await api.post('/users/otp-verify/', payload, { withCredentials: true });
+      const resolvedRedirect = ctx.redirectPath || '/';
       if (ctx.status === 'New User') {
-        navigate('/form', { state: { status: 'Manual' } });
+        navigate('/form', {
+          state: { status: 'Manual', redirectPath: resolvedRedirect },
+        });
       } else {
-        navigate('/');
+        sessionStorage.removeItem(AUTH_REDIRECT_KEY);
+        sessionStorage.removeItem('otp_ctx');
+        navigate(resolvedRedirect, { replace: true });
       }
     } catch (err) {
       console.error('OTP verify failed:', err);

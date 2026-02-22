@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import api from "./utils/api";
 import './pp.css'
 
+const AUTH_REDIRECT_KEY = "post_login_redirect";
+
 const readCookie = (name) => {
   if (typeof document === "undefined") return null;
   const nameEQ = `${name}=`;
@@ -28,6 +30,7 @@ const syncAccessTokenFromCookie = () => {
 const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
   const location = useLocation();
+  const intendedPath = `${location.pathname}${location.search}${location.hash || ""}`;
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -37,7 +40,7 @@ const ProtectedRoute = ({ children }) => {
           search: location.search,
         });
         syncAccessTokenFromCookie();
-        const response = await api.get("core/me/");
+        const response = await api.get("core/me/", { skipAuthRedirect: true });
         console.log("[ProtectedRoute] Auth check succeeded:", {
           status: response?.status,
           data: response?.data,
@@ -51,7 +54,6 @@ const ProtectedRoute = ({ children }) => {
           url: error?.config?.url,
           method: error?.config?.method,
         });
-        debugger;
         setIsAuthenticated(false);
       }
     };
@@ -110,10 +112,13 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) {
+    if (typeof window !== "undefined" && intendedPath.startsWith("/")) {
+      sessionStorage.setItem(AUTH_REDIRECT_KEY, intendedPath);
+    }
     return (
       <Navigate
         to={`/login?redirect=${encodeURIComponent(
-          location.pathname + location.search
+          intendedPath
         )}`}
         replace
       />

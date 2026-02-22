@@ -9,10 +9,12 @@ import { toast } from 'react-hot-toast';
 const MechanicList = () => {
     const [mechanics, setMechanics] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState(null);
     const [filters, setFilters] = useState({
         verified: '',
         status: ''
     });
+    const API_BASE_URL = '/api/ms-mechanics';
 
     const fetchMechanics = async () => {
         setLoading(true);
@@ -21,7 +23,7 @@ const MechanicList = () => {
             if (filters.verified) queryParams.append('verified', filters.verified);
             if (filters.status) queryParams.append('status', filters.status);
 
-            const response = await fetch(`https://mechanic-setu-backend.vercel.app/api/ms-mechanics?${queryParams.toString()}`);
+            const response = await fetch(`${API_BASE_URL}?${queryParams.toString()}`);
             const data = await response.json();
 
             if (data.success) {
@@ -47,6 +49,41 @@ const MechanicList = () => {
             ...prev,
             [name]: value
         }));
+    };
+
+    const handleDeleteMechanic = async (mechanic) => {
+        if (!mechanic?.id) return;
+
+        const confirmDelete = window.confirm(
+            `Delete mechanic "${mechanic.shop_name || mechanic.full_name || 'Unknown'}"? This action cannot be undone.`
+        );
+        if (!confirmDelete) return;
+
+        setDeletingId(mechanic.id);
+        try {
+            let response = await fetch(`${API_BASE_URL}/${mechanic.id}`, {
+                method: 'DELETE'
+            });
+
+            // Fallback alias supported by backend
+            if (!response.ok) {
+                response = await fetch(`${API_BASE_URL}/${mechanic.id}/deleted`, {
+                    method: 'DELETE'
+                });
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to delete mechanic');
+            }
+
+            setMechanics(prev => prev.filter(item => item.id !== mechanic.id));
+            toast.success('Mechanic deleted successfully');
+        } catch (error) {
+            console.error('Error deleting mechanic:', error);
+            toast.error('Failed to delete mechanic');
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     return (
@@ -179,6 +216,15 @@ const MechanicList = () => {
                                                     >
                                                         <Edit size={18} />
                                                     </Link>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteMechanic(mechanic)}
+                                                        disabled={deletingId === mechanic.id}
+                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Delete Mechanic"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>

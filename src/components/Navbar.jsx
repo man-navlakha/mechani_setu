@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Wrench,
   FileText,
+  Shield,
   UserPlus
 } from "lucide-react";
 import api from "../utils/api";
@@ -150,6 +151,13 @@ export default function Navbar() {
                     >
                       <FileText size={16} /> Service History
                     </Link>
+                    <Link
+                      to="/admin/vehicles"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      <Shield size={16} /> Admin • Vehicles
+                    </Link>
                   </div>
 
                   <div className="border-t border-gray-100 py-1">
@@ -230,6 +238,9 @@ export default function Navbar() {
                 </Link>
                 <Link to="/dashboard/vehicles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMenuOpen(false)}>
                   <Car size={20} /> My Vehicles
+                </Link>
+                <Link to="/admin/vehicles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMenuOpen(false)}>
+                  <Shield size={20} /> Admin • Vehicles
                 </Link>
                 <button
                   onClick={handleLogout}

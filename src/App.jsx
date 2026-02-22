@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import React, { useEffect } from 'react';
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Outlet, useLocation, useNavigate } from "react-router-dom";
 import './App.css';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -22,6 +22,7 @@ import MechanicRegistration from './Page/MechanicRegistration';
 import MechanicList from './Page/MechanicList';
 import MechanicDetail from './Page/MechanicDetail';
 import RCInfo from './Page/RCInfo';
+import VehicleAdmin from './Page/Admin/VehicleAdmin';
 import VehicleDashboard from './Page/Dashboard/VehicleDashboard';
 import VehicleDetails from './Page/Dashboard/VehicleDetails';
 import Protected from './ProtectedRoute';
@@ -69,6 +70,15 @@ const GlobalSocketHandler = () => {
   return null; // This component renders nothing.
 };
 
+const ProtectedShell = () => (
+  <Protected>
+    <WebSocketProvider>
+      <GlobalSocketHandler />
+      <Outlet />
+    </WebSocketProvider>
+  </Protected>
+);
+
 export default function App() {
 
   const activeJob = localStorage.getItem("activeJobData")
@@ -89,36 +99,26 @@ export default function App() {
 
 
         {/* All protected routes are nested here */}
-        <Route
-          path="/*"
-          element={
-            <Protected>
-              <WebSocketProvider>
-                <GlobalSocketHandler />
-                <Routes>
-                  <Route path="/home" element={<MainPage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/form" element={<ProcessForm />} />
-                  <Route path="/request" element={<PunctureRequestForm />} />
-                  {/* Temporary Public Routes for Testing */}
-                 
-                  <Route path="/ms" element={<MechanicRegistration />} />
-                  <Route path="/ms/list" element={<MechanicList />} />
-                  <Route path="/ms/view/:id" element={<MechanicDetail />} />
-                  <Route path="/ms/edit/:id" element={<MechanicRegistration />} />
-                  <Route path="/vehicle-rc" element={<RCInfo />} />
-                  <Route path="/dashboard/vehicles" element={<VehicleDashboard />} />
-                  <Route path="/dashboard/vehicles/:id" element={<VehicleDetails />} />
+        <Route element={<ProtectedShell />}>
+          <Route path="/home" element={<MainPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/form" element={<ProcessForm />} />
+          <Route path="/request" element={<PunctureRequestForm />} />
+          {/* Temporary Public Routes for Testing */}
+          <Route path="/ms" element={<MechanicRegistration />} />
+          <Route path="/ms/list" element={<MechanicList />} />
+          <Route path="/ms/view/:id" element={<MechanicDetail />} />
+          <Route path="/ms/edit/:id" element={<MechanicRegistration />} />
+          <Route path="/vehicle-rc" element={<RCInfo />} />
+          <Route path="/admin/vehicles" element={<VehicleAdmin />} />
+          <Route path="/dashboard/vehicles" element={<VehicleDashboard />} />
+          <Route path="/dashboard/vehicles/:id" element={<VehicleDetails />} />
 
-                  <Route element={<RequestLayout />}>
-                    <Route path="/finding/:request_id" element={<FindingMechanic />} />
-                    <Route path="/mechanic-found/:request_id" element={<MechanicFound />} />
-                  </Route>
-                </Routes>
-              </WebSocketProvider>
-            </Protected>
-          }
-        />
+          <Route element={<RequestLayout />}>
+            <Route path="/finding/:request_id" element={<FindingMechanic />} />
+            <Route path="/mechanic-found/:request_id" element={<MechanicFound />} />
+          </Route>
+        </Route>
       </Routes>
     </div>
   );
