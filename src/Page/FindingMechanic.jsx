@@ -140,6 +140,27 @@ export default function FindingMechanic() {
     }
   }, [socket, connectionStatus, request_id]);
 
+  // Keep the job request alive while searching for a mechanic
+  useEffect(() => {
+    if (!socket || connectionStatus !== 'connected') return;
+    const jobId = parseInt(request_id, 10);
+    if (Number.isNaN(jobId)) return;
+
+    const sendHeartbeat = () => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'user_heartbeat',
+          job_id: jobId,
+        }));
+      }
+    };
+
+    sendHeartbeat();
+    const intervalId = window.setInterval(sendHeartbeat, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [socket, connectionStatus, request_id]);
+
   useEffect(() => {
     console.log("msg", lastMessage);
 

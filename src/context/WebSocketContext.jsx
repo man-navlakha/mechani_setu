@@ -22,16 +22,22 @@ export const WebSocketProvider = ({ children }) => {
       console.log('%c[WS-PROVIDER] Attempting to connect...', 'color: #8A2BE2;');
 
       try {
+        const wsHttpBase =
+          import.meta.env.VITE_WS_HTTP_BASE || 'https://mechanic-setu-int0.onrender.com';
         const wsBase =
           import.meta.env.VITE_WS_BASE || 'wss://mechanic-setu-int0.onrender.com';
 
-        const tokenResponse = await fetch('/core/token/', {
+        const tokenResponse = await fetch(`${wsHttpBase}/api/core/token/`, {
           credentials: 'include',
         });
         if (!tokenResponse.ok) throw new Error('Failed to fetch access token');
 
         const tokenData = await tokenResponse.json();
-        const accessToken = tokenData.access || tokenData.access_token;
+        const accessToken =
+          tokenData.access ||
+          tokenData.access_token ||
+          tokenData.token ||
+          tokenData.ws_token;
         if (!accessToken) throw new Error('Access token missing in response');
 
         const wsUrl = `${wsBase}/ws/job_notifications/?token=${encodeURIComponent(accessToken)}`;

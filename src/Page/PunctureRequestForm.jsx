@@ -21,6 +21,7 @@ import { toast } from 'react-hot-toast';
 import { Search, Info, AlertCircle } from 'lucide-react';
 import PlacePickerGujarat from '../components/PlacePickerGujarat'; // Import the updated component
 import Navbar from '../components/Navbar';
+import Cookies from 'js-cookie';
 
 // --- CONSTANTS ---
 // Moved outside the component so they are not re-declared on render
@@ -64,6 +65,7 @@ const inferVehicleTypeFromClass = (vehicleClassRaw) => {
 
 // ✨ ADDED: Key for localStorage
 const FORM_STORAGE_KEY = 'punctureRequestFormData';
+const JOBS_API_BASE = import.meta.env.VITE_JOBS_API_BASE || 'https://mechanic-setu-int0.onrender.com';
 
 
 // --- MAIN COMPONENT ---
@@ -245,6 +247,15 @@ export default function PunctureRequestFormRedesigned() {
                 ...(vehicleIdFromQuery ? { vehicleId: Number(vehicleIdFromQuery) } : {}),
             };
 
+            const vehicleDetails = formData.rcData ? {
+                make: formData.rcData.make || formData.rcData.maker || formData.rcData.manufacturer || '',
+                model: formData.rcData.model || formData.rcData.brand_model || '',
+                year: formData.rcData.year || formData.rcData.manufacturing_year || '',
+            } : null;
+            if (vehicleDetails && (vehicleDetails.make || vehicleDetails.model || vehicleDetails.year)) {
+                payload.vehical_details = vehicleDetails;
+            }
+
             if (isScheduleService) {
                 payload.date = formData.scheduledDate;
                 payload.time = formData.scheduledTime;
@@ -253,7 +264,13 @@ export default function PunctureRequestFormRedesigned() {
                 });
             }
 
-            const response = await api.post("/jobs/CreateServiceRequest/", payload);
+            const accessToken = Cookies.get('access') || localStorage.getItem('access');
+            const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
+            const response = await api.post(
+                `${JOBS_API_BASE}/api/jobs/CreateServiceRequest/`,
+                payload,
+                headers ? { headers } : undefined
+            );
 
             // API sometimes nests the created id under data; check all known shapes
             const responseData = response?.data || {};
@@ -270,8 +287,12 @@ export default function PunctureRequestFormRedesigned() {
                 toast('Sended Request!', {
                     icon: '👍',
                 });
-                localStorage.removeItem(FORM_STORAGE_KEY);
                 if (requestId) {
+                    localStorage.setItem('activeJobData', JSON.stringify({
+                        request_id: requestId,
+                        status: 'PENDING',
+                        created_at: new Date().toISOString(),
+                    }));
                     navigate(`/finding/${requestId}`);
                 } else {
                     toast.error("Request created, but missing request id from server.");
