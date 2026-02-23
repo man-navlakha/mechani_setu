@@ -272,13 +272,18 @@ export default function PunctureRequestFormRedesigned() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${accessToken}`,
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
                 },
                 credentials: 'include',
                 body: JSON.stringify(payload)
             });
             // API sometimes nests the created id under data; check all known shapes
-            const responseData = response?.data || {};
+            let responseData = {};
+            try {
+                responseData = await response.json();
+            } catch (parseError) {
+                responseData = {};
+            }
             const nestedData = responseData.data || {};
             const requestId =
                 responseData.request_id ??
@@ -303,7 +308,7 @@ export default function PunctureRequestFormRedesigned() {
                     toast.error("Request created, but missing request id from server.");
                 }
             } else {
-                toast.error("Failed to submit request. Please try again.");
+                toast.error(responseData?.message || "Failed to submit request. Please try again.");
             }
         } catch (error) {
             console.error("CreateServiceRequest failed:", error?.response?.data || error);
