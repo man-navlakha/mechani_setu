@@ -184,7 +184,7 @@ const LoginPage = () => {
                 useOneTap
             />
         </div>
-
+<p className='text-gray-200'>If you are agree with our <a href="/TermsAndConditions" className="text-blue-400 hover:underline">Terms and Conditions</a> and <a href="/PrivacyPolicy" className="text-blue-400 hover:underline">Privacy Policy</a>, please continue.</p>
       </div>
     </div>
   );

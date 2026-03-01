@@ -41,6 +41,9 @@ import Protected from './ProtectedRoute';
 import NavbarLanding from './components/NavbarLanding';
 import { WebSocketProvider, useWebSocket } from './context/WebSocketContext';
 import api from './utils/api';
+import TermsAndConditions from './Page/TermsAndConditions';
+import PrivacyPolicy from './Page/PrivacyPolicy';
+import BrandGuidelines from './Page/BrandGuidelines';
 
 const LANDING_ISSUES = ['Flat tyre', 'Bike not starting', 'Car breakdown', 'Towing help'];
 const LANDING_LOCATIONS = [
@@ -447,10 +450,10 @@ function LandingPage() {
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-zinc-800">
               <span className="text-sm sm:text-base tracking-wide">(c) 2026 Mechanic Setu.</span>
-              <a href="#" className="text-sm sm:text-base tracking-wide hover:text-zinc-200 transition-colors">
+              <a href="PrivacyPolicy" className="text-sm sm:text-base tracking-wide hover:text-zinc-200 transition-colors">
                 Policies
               </a>
-              <a href="#" className="text-sm sm:text-base tracking-wide hover:text-zinc-200 transition-colors">
+              <a href="TermsAndConditions" className="text-sm sm:text-base tracking-wide hover:text-zinc-200 transition-colors">
                 Terms
               </a>
             </div>
@@ -576,6 +579,13 @@ export default function App() {
         <Route path="/logout" element={<Logout />} />
         <Route path="/nearby-mechanics" element={<NearbyMechanicsPage />} />
         <Route path="/vehicle-rc" element={<RCInfo />} />
+
+
+        <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
+        <Route path="/TermsAndConditions" element={<TermsAndConditions />} />
+        <Route path="/BrandGuidelines" element={<BrandGuidelines />} />
+        
+        
 
         <Route element={<ProtectedShell />}>
           <Route path="/home" element={<MainPage />} />
